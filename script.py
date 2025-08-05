@@ -2,6 +2,8 @@ import dbus
 import dbus.mainloop.glib
 from gi.repository import GLib
 import os
+import time
+import threading
 
 """
 Brightness controller class
@@ -13,14 +15,15 @@ Functions:
     ambient_brightness_backlight_set: map ambient sensor onto brightness
     set_brightness: set brightness
     get_brightness: get brightness
-    auto_brightness_polling: automatically poll at polling rate to change brightness automatically
+    
+Objects:
+    AutoBrightnessPolling: automatically poll at polling rate to change brightness automatically
 """
 class BrightnessController:
 
-    def __init__(self,poll_interval):
+    def __init__(self):
         base_backlight_path = "/sys/class/backlight"
         base_ambient_sensor_path = "/sys/bus/iio/devices"
-        self.poll_interval = poll_interval
 
         try:
             # Find first usable backlight device
@@ -53,7 +56,7 @@ class BrightnessController:
         try:
 
             with open(self.ambient_sensor_path, "r") as f:
-                ambient_brightness = (f.read().strip())
+                ambient_brightness = int(f.read().strip())
 
             self.set_brightness(ambient_brightness)
 
@@ -74,13 +77,31 @@ class BrightnessController:
     def get_brightness(self):
         try:
             with open(self.brightness_path, "r") as f:
-                return f.read().strip()
+                return int(f.read().strip())
 
         except Exception as e:
             print(f"Error getting brightness: {e}")
 
-    def auto_brightness_poll(self):
-        print("auto_brightness_poll")
+    class AutoBrightnessPoller(threading.Thread):
+        def __init__(self, controller, poll_interval):
+            super().__init__()
+            self.poll_interval = poll_interval
+            self.controller = controller
+            self.running = True
+            self.daemon = True
+
+        def stop(self):
+            print(f"Stopping auto-brightness")
+            self.running = False
+
+        def run(self):
+            print(f"Auto brightness running")
+            try:
+                while self.running:
+                    self.controller.ambient_brightness_backlight_set()
+                    time.sleep(self.poll_interval)
+            except Exception as e:
+                print(f"Auto brightness error: {e}")
 
 
 """
@@ -102,10 +123,14 @@ def on_properties_changed(interface, changed_properties, invalidated_properties)
         }
         print(f"Battery State Changed: {state_map.get(state, 'Unknown')}")
 
-        global brightness_device_object
+        global controller
+        global poller
 
         if state == 1 or state == 4:
-            brightness_device_object.set_brightness(1000000)
+            poller.stop()
+            controller.set_brightness(1000000)
+        elif state == 2 or state == 3:
+            poller.start()
 
 
 """
@@ -135,7 +160,9 @@ def setup_listener():
     loop.run()
 
 if __name__ == "__main__":
-    brightness_device_object = BrightnessController(3)
+    controller = BrightnessController()
+    poller = controller.AutoBrightnessPoller(controller,3)
+
     setup_listener()
 
 
