@@ -5,6 +5,7 @@ import os
 import time
 import threading
 import subprocess
+import configparser
 
 """
 Brightness controller class
@@ -229,21 +230,48 @@ def start():
         bat()
 
 def bat():
-    global controller, poller, powermode_controller
-    poller.start()
+    global controller, poller, powermode_controller, polling_interval
+
+    if not poller or not poller.is_alive():
+        poller = controller.AutoBrightnessPoller(controller, polling_interval)
+        poller.start()
     powermode_controller.set_tuned_profile_to_low()
 
 def ac():
     global controller, poller, powermode_controller
-    poller.stop()
-    time.sleep(1)
+    if poller and poller.is_alive():
+        poller.stop()
+        poller.join()  # Wait for thread to finish
     controller.set_brightness(controller.max_brightness)
     powermode_controller.set_tuned_profile_to_high()
 
+class Config:
+    def __init__(self, path):
+        self.config = configparser.ConfigParser()
+        self.config.read(path)
+
+    def get_poll_interval(self):
+        try:
+            return int(self.config['brightness'].get('poll_interval', 1))
+        except Exception:
+            return 1
+
+    def get_high_power_profile(self):
+        return self.config['power'].get('high_power_profile', 'throughput-performance')
+
+    def get_low_power_profile(self):
+        return self.config['power'].get('low_power_profile', 'powersave')
+
 if __name__ == "__main__":
+    config = Config('config.conf')
+
+    high_power = config.get_high_power_profile()
+    low_power = config.get_low_power_profile()
+    polling_interval = int(config.get_poll_interval())
+
     controller = BrightnessController()
-    poller = controller.AutoBrightnessPoller(controller,1)
-    powermode_controller = PowerModeController('throughput-performance','powersave')
+    poller = controller.AutoBrightnessPoller(controller, polling_interval)
+    powermode_controller = PowerModeController(high_power,low_power)
 
     start()
     setup_listener()
