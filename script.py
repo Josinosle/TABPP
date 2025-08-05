@@ -58,7 +58,24 @@ class BrightnessController:
             with open(self.ambient_sensor_path, "r") as f:
                 ambient_brightness = int(f.read().strip())
 
-            self.set_brightness(ambient_brightness)
+            current = int(self.get_brightness())
+            target = int(ambient_brightness * 200)
+            step_count = 10
+
+            # Prevent tiny loops or no movement
+            if current == target:
+                return
+
+            step = (target - current) / step_count
+
+            print(f"Target brightness: {target}")
+
+            for i in range(1, step_count + 1):
+                level = int(current + step * i)
+                level = max(0, min(level, self.max_brightness))  # Clamp
+                print(f"Setting brightness to: {level}")
+                self.set_brightness(level)
+                time.sleep(0.05)
 
         except Exception as e:
             print(f"Ambient brightness backlight set error: {e}")
@@ -120,6 +137,8 @@ def on_properties_changed(interface, changed_properties, invalidated_properties)
             2: "Discharging",
             3: "Empty",
             4: "Fully charged",
+            5: "Pending charge",
+            6: "Pending discharge"
         }
         print(f"Battery State Changed: {state_map.get(state, 'Unknown')}")
 
@@ -128,7 +147,8 @@ def on_properties_changed(interface, changed_properties, invalidated_properties)
 
         if state == 1 or state == 4:
             poller.stop()
-            controller.set_brightness(1000000)
+            time.sleep(1)
+            controller.set_brightness(10000000)
         elif state == 2 or state == 3:
             poller.start()
 
@@ -161,7 +181,7 @@ def setup_listener():
 
 if __name__ == "__main__":
     controller = BrightnessController()
-    poller = controller.AutoBrightnessPoller(controller,3)
+    poller = controller.AutoBrightnessPoller(controller,1)
 
     setup_listener()
 
