@@ -4,6 +4,7 @@ from gi.repository import GLib
 import os
 import time
 import threading
+import subprocess
 
 """
 Brightness controller class
@@ -120,6 +121,24 @@ class BrightnessController:
             except Exception as e:
                 print(f"Auto brightness error: {e}")
 
+class PowerModeController:
+    def __init__(self,high_power,low_power):
+        self.high_power = high_power
+        self.low_power = low_power
+
+    def set_tuned_profile_to_high(self):
+        try:
+            subprocess.run(['tuned-adm', 'profile', self.high_power], check=True)
+            print(f"Tuned profile set to '{self.high_power}'")
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to set tuned profile: {e}")
+
+    def set_tuned_profile_to_low(self):
+        try:
+            subprocess.run(['tuned-adm', 'profile', self.low_power], check=True)
+            print(f"Tuned profile set to '{self.low_power}'")
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to set tuned profile: {e}")
 
 """
 dbus power state change handler on upower
@@ -142,15 +161,10 @@ def on_properties_changed(interface, changed_properties, invalidated_properties)
         }
         print(f"Battery State Changed: {state_map.get(state, 'Unknown')}")
 
-        global controller
-        global poller
-
         if state == 1 or state == 4:
-            poller.stop()
-            time.sleep(1)
-            controller.set_brightness(10000000)
+            ac()
         elif state == 2 or state == 3:
-            poller.start()
+            bat()
 
 
 """
@@ -181,7 +195,6 @@ def setup_listener():
 
 def start():
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-    global controller, poller
 
     bus = dbus.SystemBus()
     battery_path = None
@@ -200,7 +213,7 @@ def start():
             break
 
     if not battery_path:
-        print("⚠️ Battery device not found.")
+        print("Battery device not found.")
         return
 
     # Get battery state
@@ -211,15 +224,26 @@ def start():
     print(f"Initial battery state: {state}")
 
     if state in (1, 4):  # Charging or Fully charged
-        poller.stop()
-        controller.set_brightness(controller.max_brightness)
+        ac()
     elif state in (2, 3):  # Discharging or Empty
-        poller.start()
+        bat()
 
+def bat():
+    global controller, poller, powermode_controller
+    poller.start()
+    powermode_controller.set_tuned_profile_to_low()
+
+def ac():
+    global controller, poller, powermode_controller
+    poller.stop()
+    time.sleep(1)
+    controller.set_brightness(controller.max_brightness)
+    powermode_controller.set_tuned_profile_to_high()
 
 if __name__ == "__main__":
     controller = BrightnessController()
     poller = controller.AutoBrightnessPoller(controller,1)
+    powermode_controller = PowerModeController('throughput-performance','powersave')
 
     start()
     setup_listener()
