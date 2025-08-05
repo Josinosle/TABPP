@@ -252,7 +252,7 @@ class Config:
 
     def get_poll_interval(self):
         try:
-            return int(self.config['brightness'].get('poll_interval', 1))
+            return int(self.config['brightness'].get('poll_interval', '1'))
         except Exception:
             return 1
 
