@@ -179,10 +179,49 @@ def setup_listener():
     loop = GLib.MainLoop()
     loop.run()
 
+def start():
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+    global controller, poller
+
+    bus = dbus.SystemBus()
+    battery_path = None
+
+    # Find the battery device
+    upower = bus.get_object("org.freedesktop.UPower", "/org/freedesktop/UPower")
+    upower_iface = dbus.Interface(upower, "org.freedesktop.UPower")
+    devices = upower_iface.EnumerateDevices()
+
+    for path in devices:
+        dev = bus.get_object("org.freedesktop.UPower", path)
+        props = dbus.Interface(dev, "org.freedesktop.DBus.Properties")
+        device_type = props.Get("org.freedesktop.UPower.Device", "Type")
+        if device_type == 2:  # 2 = Battery
+            battery_path = path
+            break
+
+    if not battery_path:
+        print("⚠️ Battery device not found.")
+        return
+
+    # Get battery state
+    battery = bus.get_object("org.freedesktop.UPower", battery_path)
+    battery_props = dbus.Interface(battery, "org.freedesktop.DBus.Properties")
+    state = battery_props.Get("org.freedesktop.UPower.Device", "State")
+
+    print(f"Initial battery state: {state}")
+
+    if state in (1, 4):  # Charging or Fully charged
+        poller.stop()
+        controller.set_brightness(controller.max_brightness)
+    elif state in (2, 3):  # Discharging or Empty
+        poller.start()
+
+
 if __name__ == "__main__":
     controller = BrightnessController()
     poller = controller.AutoBrightnessPoller(controller,1)
 
+    start()
     setup_listener()
 
 
