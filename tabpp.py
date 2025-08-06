@@ -61,11 +61,12 @@ class BrightnessController:
     used for slow moving brightness adjustments with ambient sensor and on AC connect
     """
     def slow_moving_brightness_set(self,target):
+        global display_nits
         try:
             if not target:
                 with open(self.ambient_sensor_path, "r") as f:
                     ambient_brightness = int(f.read().strip())
-                    target = int(ambient_brightness * 50) + self.brightness_offset
+                    target = int(ambient_brightness/3 * self.max_brightness/display_nits)
 
             current = int(self.get_brightness())
 
@@ -256,6 +257,7 @@ if __name__ == "__main__":
     low_power_profile = os.environ.get("LOW_POWER_PROFILE", "powersave")
     ac_brightness = int(os.environ.get("AC_BRIGHTNESS", 100))
     brightness_offset = int(os.environ.get("BRIGHTNESS_OFFSET", 1000))
+    display_nits = int(os.environ.get("DISPLAY_NITS", 400))
 
     controller = BrightnessController(brightness_offset)
     poller = controller.AutoBrightnessPoller(controller, polling_interval)
