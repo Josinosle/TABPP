@@ -62,7 +62,7 @@ class BrightnessController:
                 ambient_brightness = int(f.read().strip())
 
             current = int(self.get_brightness())
-            target = int(ambient_brightness * 200)
+            target = int(ambient_brightness * 200) + self.brightness_offset
             step_count = 20
 
             # Prevent tiny loops or no movement
