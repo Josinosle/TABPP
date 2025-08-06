@@ -63,7 +63,7 @@ class BrightnessController:
 
             current = int(self.get_brightness())
             target = int(ambient_brightness * 200)
-            step_count = 10
+            step_count = 20
 
             # Prevent tiny loops or no movement
             if current == target:
@@ -75,7 +75,7 @@ class BrightnessController:
                 level = int(current + step * i)
                 level = max(0, min(level, self.max_brightness))  # Clamp
                 self.set_brightness(level)
-                time.sleep(0.1)
+                time.sleep(0.05)
 
         except Exception as e:
             print(f"Ambient brightness backlight set error: {e}")
