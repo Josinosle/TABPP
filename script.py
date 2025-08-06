@@ -23,9 +23,10 @@ Objects:
 """
 class BrightnessController:
 
-    def __init__(self):
+    def __init__(self,brightness_offset):
         base_backlight_path = "/sys/class/backlight"
         base_ambient_sensor_path = "/sys/bus/iio/devices"
+        self.brightness_offset = brightness_offset
 
         try:
             # Find first usable backlight device
@@ -70,14 +71,11 @@ class BrightnessController:
 
             step = (target - current) / step_count
 
-            print(f"Target brightness: {target}")
-
             for i in range(1, step_count + 1):
                 level = int(current + step * i)
                 level = max(0, min(level, self.max_brightness))  # Clamp
-                print(f"Setting brightness to: {level}")
                 self.set_brightness(level)
-                time.sleep(0.05)
+                time.sleep(0.1)
 
         except Exception as e:
             print(f"Ambient brightness backlight set error: {e}")
@@ -88,10 +86,31 @@ class BrightnessController:
             with open(self.brightness_path, "w") as f:
                 f.write(str(level))
 
-            print(f"Brightness set to {level}/{self.max_brightness}")
-
         except Exception as e:
             print(f"Error setting brightness: {e}")
+
+    def ac_brightness(self,target):
+        try:
+
+            current = int(self.get_brightness())
+            step_count = 10
+
+            # Prevent tiny loops or no movement
+            if current == target:
+                return
+
+            step = (target - current) / step_count
+
+            print(f"Target brightness: {target}")
+
+            for i in range(1, step_count + 1):
+                level = int(current + step * i)
+                level = max(0, min(level, self.max_brightness))  # Clamp
+                self.set_brightness(level)
+                time.sleep(0.05)
+
+        except Exception as e:
+            print(f"Ambient brightness backlight set error: {e}")
 
     def get_brightness(self):
         try:
@@ -238,19 +257,21 @@ def bat():
     powermode_controller.set_tuned_profile_to_low()
 
 def ac():
-    global controller, poller, powermode_controller
+    global controller, poller, powermode_controller, ac_brightness
     if poller and poller.is_alive():
         poller.stop()
         poller.join()  # Wait for thread to finish
-    controller.set_brightness(controller.max_brightness)
+    controller.ac_brightness(controller.max_brightness * ac_brightness/100)
     powermode_controller.set_tuned_profile_to_high()
 
 if __name__ == "__main__":
     polling_interval = float(os.environ.get("POLL_INTERVAL", 1))
     high_power_profile = os.environ.get("HIGH_POWER_PROFILE", "throughput-performance")
     low_power_profile = os.environ.get("LOW_POWER_PROFILE", "powersave")
+    ac_brightness = os.environ.get("AC_BRIGHTNESS", 100)
+    brightness_offset = int(os.environ.get("BRIGHTNESS_OFFSET", 1000))
 
-    controller = BrightnessController()
+    controller = BrightnessController(brightness_offset)
     poller = controller.AutoBrightnessPoller(controller, polling_interval)
     powermode_controller = PowerModeController(high_power_profile,low_power_profile)
 

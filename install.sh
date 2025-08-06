@@ -4,9 +4,9 @@ set -e
 
 SCRIPT_NAME="script.py"
 INSTALL_DIR=$(pwd)
-SERVICE_NAME="autopower.service"
+SERVICE_NAME="tabpp.service"
 SERVICE_PATH="/etc/systemd/system/$SERVICE_NAME"
-CONFIG_PATH="/etc/autopower"
+CONFIG_PATH="/etc/tabpp"
 PYTHON_PATH=$(which python3)
 
 echo "[+] Installing Brightness Controller"
