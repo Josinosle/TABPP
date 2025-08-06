@@ -245,33 +245,14 @@ def ac():
     controller.set_brightness(controller.max_brightness)
     powermode_controller.set_tuned_profile_to_high()
 
-class Config:
-    def __init__(self, path):
-        self.config = configparser.ConfigParser()
-        self.config.read(path)
-
-    def get_poll_interval(self):
-        try:
-            return int(self.config['brightness'].get('poll_interval', '1'))
-        except Exception:
-            return 1
-
-    def get_high_power_profile(self):
-        return self.config['power'].get('high_power_profile', 'throughput-performance')
-
-    def get_low_power_profile(self):
-        return self.config['power'].get('low_power_profile', 'powersave')
-
 if __name__ == "__main__":
-    config = Config('config.conf')
-
-    high_power = config.get_high_power_profile()
-    low_power = config.get_low_power_profile()
-    polling_interval = int(config.get_poll_interval())
+    polling_interval = float(os.environ.get("POLL_INTERVAL", 1))
+    high_power_profile = os.environ.get("HIGH_POWER_PROFILE", "throughput-performance")
+    low_power_profile = os.environ.get("LOW_POWER_PROFILE", "powersave")
 
     controller = BrightnessController()
     poller = controller.AutoBrightnessPoller(controller, polling_interval)
-    powermode_controller = PowerModeController(high_power,low_power)
+    powermode_controller = PowerModeController(high_power_profile,low_power_profile)
 
     start()
     setup_listener()
