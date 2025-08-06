@@ -5,7 +5,6 @@ import os
 import time
 import threading
 import subprocess
-import configparser
 
 """
 Brightness controller class
