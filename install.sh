@@ -7,6 +7,7 @@ INSTALL_DIR=$(pwd)
 SERVICE_NAME="tabpp.service"
 SERVICE_PATH="/etc/systemd/system/$SERVICE_NAME"
 CONFIG_PATH="/etc/tabpp"
+PYTHON_PATH=$(which python3)
 
 echo "[+] Installing Brightness Controller"
 
@@ -27,7 +28,7 @@ After=multi-user.target
 [Service]
 Type=simple
 EnvironmentFile=$CONFIG_PATH/config.conf
-ExecStart=$INSTALL_DIR/$SCRIPT_NAME
+ExecStart=$PYTHON_PATH $INSTALL_DIR/$SCRIPT_NAME
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

@@ -54,14 +54,19 @@ class BrightnessController:
         except Exception as e:
             print(f"Ambient sensor device error: {e}")
 
-    def ambient_brightness_backlight_set(self):
-        try:
 
-            with open(self.ambient_sensor_path, "r") as f:
-                ambient_brightness = int(f.read().strip())
+    """
+    used for slow moving brightness adjustments with ambient sensor and on AC connect
+    """
+    def slow_moving_brightness_set(self,target):
+        try:
+            if not target:
+                with open(self.ambient_sensor_path, "r") as f:
+                    ambient_brightness = int(f.read().strip())
+                    target = int(ambient_brightness * 200) + self.brightness_offset
 
             current = int(self.get_brightness())
-            target = int(ambient_brightness * 200) + self.brightness_offset
+
             step_count = 100
 
             # Prevent tiny loops or no movement
@@ -74,10 +79,10 @@ class BrightnessController:
                 level = int(current + step * i)
                 level = max(0, min(level, self.max_brightness))  # Clamp
                 self.set_brightness(level)
-                time.sleep(0.01)
+                time.sleep(0.005)
 
         except Exception as e:
-            print(f"Ambient brightness backlight set error: {e}")
+            print(f"Backlight set error: {e}")
 
     def set_brightness(self,level):
         try:
@@ -87,26 +92,6 @@ class BrightnessController:
 
         except Exception as e:
             print(f"Error setting brightness: {e}")
-
-    def ac_brightness(self,target):
-        try:
-
-            current = int(self.get_brightness())
-            step_count = 100
-
-            # Prevent tiny loops or no movement
-            if current == target:
-                return
-
-            step = (target - current) / step_count
-
-            print(f"Target brightness: {target}")
-
-            for i in range(1, step_count + 1):
-                level = int(current + step * i)
-                level = max(0, min(level, self.max_brightness))  # Clamp
-                self.set_brightness(level)
-                time.sleep(0.005)
 
         except Exception as e:
             print(f"Ambient brightness backlight set error: {e}")
@@ -135,7 +120,7 @@ class BrightnessController:
             print(f"Auto brightness running")
             try:
                 while self.running:
-                    self.controller.ambient_brightness_backlight_set()
+                    self.controller.slow_moving_brightness_set(0)
                     time.sleep(self.poll_interval)
             except Exception as e:
                 print(f"Auto brightness error: {e}")
@@ -260,7 +245,7 @@ def ac():
     if poller and poller.is_alive():
         poller.stop()
         poller.join()  # Wait for thread to finish
-    controller.ac_brightness(controller.max_brightness * ac_brightness/100)
+    controller.slow_moving_brightness_set(controller.max_brightness * ac_brightness/100)
     powermode_controller.set_tuned_profile_to_high()
 
 if __name__ == "__main__":
