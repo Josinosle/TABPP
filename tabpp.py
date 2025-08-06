@@ -65,7 +65,7 @@ class BrightnessController:
             if not target:
                 with open(self.ambient_sensor_path, "r") as f:
                     ambient_brightness = int(f.read().strip())
-                    target = int(ambient_brightness * 200) + self.brightness_offset
+                    target = int(ambient_brightness * 50) + self.brightness_offset
 
             current = int(self.get_brightness())
 
