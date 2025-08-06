@@ -268,7 +268,7 @@ if __name__ == "__main__":
     polling_interval = float(os.environ.get("POLL_INTERVAL", 1))
     high_power_profile = os.environ.get("HIGH_POWER_PROFILE", "throughput-performance")
     low_power_profile = os.environ.get("LOW_POWER_PROFILE", "powersave")
-    ac_brightness = os.environ.get("AC_BRIGHTNESS", 100)
+    ac_brightness = int(os.environ.get("AC_BRIGHTNESS", 100))
     brightness_offset = int(os.environ.get("BRIGHTNESS_OFFSET", 1000))
 
     controller = BrightnessController(brightness_offset)
