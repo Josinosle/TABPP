@@ -45,4 +45,4 @@ sudo systemctl start "$SERVICE_NAME"
 sudo systemctl restart "$SERVICE_NAME"
 
 
-echo "[+] Brightness Controller installed and running"
+echo "[+] TABPP installed and running"
