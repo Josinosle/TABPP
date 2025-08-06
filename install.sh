@@ -42,5 +42,6 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable "$SERVICE_NAME"
 sudo systemctl start "$SERVICE_NAME"
+sudo systemctl restart "$SERVICE_NAME"
 
 echo "[+] Brightness Controller installed and running"
