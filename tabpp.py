@@ -63,11 +63,9 @@ class BrightnessController:
     def slow_moving_brightness_set(self,target):
         try:
             if not target:
-                with open(self.ambient_sensor_path, "r") as f:
-                    ambient_brightness = int(f.read().strip()) / 1000
-
-                    temp = ((ambient_brightness-1) - 1/2*(ambient_brightness-1)**2 + 1/3*(ambient_brightness-1)**3)/2.5 + 1
-                    target = (temp*300) * (self.max_brightness/display_nits) + brightness_offset
+                ambient_brightness = self.get_ambience() / 1000
+                temp = ((ambient_brightness-1) - 1/2*(ambient_brightness-1)**2 + 1/3*(ambient_brightness-1)**3)/2.5 + 1
+                target = (temp*300) * (self.max_brightness/display_nits) + brightness_offset
 
             current = int(self.get_brightness())
 
@@ -107,6 +105,14 @@ class BrightnessController:
 
         except Exception as e:
             print(f"Error getting brightness: {e}")
+
+    def get_ambience(self):
+        try:
+            with open(self.ambient_sensor_path, "r") as f:
+                return int(f.read().strip())
+
+        except Exception as e:
+            print(f"Error getting ambient light: {e}")
 
     class AutoBrightnessPoller(threading.Thread):
         def __init__(self, controller, poll_interval):
